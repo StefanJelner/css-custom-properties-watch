@@ -20,15 +20,17 @@ Copy the file `/dist/css-custom-properties-watch.iife.min.js` and add the follow
     document.addEventListener('DOMContentLoaded', function() {
         var watcher = new CSSCustomPropertiesWatch();
 
-        var root$ = watcher.watch$(document.documentElement).subscribe(console.log);
+        var root$ = watcher.watch$(document.documentElement);
+        
+        root$.subscribe(console.log);
 
-        document.documentElement.style.setProperty('--foo', '12px');
+        document.documentElement.style.setProperty('--foo', '12px'); // logs ['--foo', '12px']
 
-        root$.next(['--foo', '13px']);
+        root$.next(['--foo', '13px']); // logs ['--foo', '13px']
 
         watcher.unwatch(document.documentElement);
 
-        document.documentElement.style.setProperty('--foo', '14px');
+        document.documentElement.style.setProperty('--foo', '14px'); // logs nothing
 
         root$.next(['--foo', '15px']); // should throw an error
     });
@@ -36,3 +38,9 @@ Copy the file `/dist/css-custom-properties-watch.iife.min.js` and add the follow
 ```
 
 ## In TypeScript (and ES6)
+
+Actually this library is more meant for being used in TypeScript- or ES6-projects. One advantage is, that if the project uses [RxJS](https://github.com/reactivex/rxjs) anyway, the usage in this library does not add up to the bundle size.
+
+## License
+
+This software is brought to you with :heart: **love** :heart: from Dortmund and offered and distributed under the ISC license. See `LICENSE.txt` and [Wikipedia](https://en.wikipedia.org/wiki/ISC_license) for more information.
