@@ -1529,7 +1529,20 @@ function () {
         var watcher = context._getWatcherMatch(this);
 
         if (watcher !== null) {
-          watcher.watcher.subject.next(args);
+          var oldValue = watcher.watcher.cssStyleDeclaration.getPropertyValue(args[0]);
+
+          if (args[1] !== oldValue) {
+            context._originalSetProperty.apply(this, args);
+
+            var newValue = watcher.watcher.cssStyleDeclaration.getPropertyValue(args[0]); // sometimes changing a property to an invalid value can lead to the initial value being
+            // set, which can be the old value. then nothing should be done.
+
+            if (newValue !== oldValue) {
+              watcher.watcher.subject.next(args.slice(0, 1).concat(newValue, args.slice(2)));
+            }
+          }
+
+          return;
         }
       }
 

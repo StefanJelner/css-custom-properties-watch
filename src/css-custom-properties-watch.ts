@@ -9,7 +9,7 @@ export default class CSSCustomPropertiesWatch {
         CSSStyleDeclaration.prototype.setProperty = this._setProperty(this);
     }
 
-    public watch$($el: HTMLElement): Subject<Parameters<CSSStyleDeclaration['setProperty']>> {
+    public watch$($el: HTMLElement | SVGElement): Subject<Parameters<CSSStyleDeclaration['setProperty']>> {
         const watcherMatch = this._getWatcherMatch($el.style);
 
         if (watcherMatch === null) {
@@ -30,7 +30,7 @@ export default class CSSCustomPropertiesWatch {
         return watcherMatch.watcher.subject;
     }
 
-    public unwatch($el: HTMLElement): boolean {
+    public unwatch($el: HTMLElement | SVGElement): boolean {
         const watcherMatch = this._getWatcherMatch($el.style);
 
         if (watcherMatch !== null) {
@@ -52,7 +52,28 @@ export default class CSSCustomPropertiesWatch {
             if (this && args[0].slice(0, 2) === '--') {
                 const watcher = context._getWatcherMatch(this);
 
-                if (watcher !== null) { watcher.watcher.subject.next(args); }
+                if (watcher !== null) {
+                    const oldValue = watcher.watcher.cssStyleDeclaration.getPropertyValue(args[0]);
+
+                    if (args[1] !== oldValue) {
+                        context._originalSetProperty.apply(this, args);
+
+                        const newValue = watcher.watcher.cssStyleDeclaration.getPropertyValue(args[0]);
+
+                        // sometimes changing a property to an invalid value can lead to the initial value being
+                        // set, which can be the old value. then nothing should be done.
+                        if (newValue !== oldValue) {
+                            watcher.watcher.subject.next(
+                                args.slice(0, 1).concat(
+                                    newValue
+                                    , args.slice(2)
+                                ) as Parameters<CSSStyleDeclaration['setProperty']>
+                            );
+                        }
+                    }
+
+                    return;
+                }
             }
 
             context._originalSetProperty.apply(this, args);
