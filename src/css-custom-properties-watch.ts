@@ -26,7 +26,7 @@ export default class CSSCustomPropertiesWatch {
             this._watchers = this._watchers.concat(newWatcher);
 
             subject.subscribe((args: Parameters<CSSStyleDeclaration['setProperty']>) => {
-                this._setPropertyCheck($el.style, newWatcher, args, false);
+                this._setPropertyCheck(newWatcher, args, false);
             });
 
             return subject;
@@ -58,7 +58,7 @@ export default class CSSCustomPropertiesWatch {
                 const watcherMatch = context._getWatcherMatch(this);
 
                 if (watcherMatch !== null) {
-                    context._setPropertyCheck.apply(context, [this, watcherMatch.watcher, args, true]);
+                    context._setPropertyCheck.apply(context, [watcherMatch.watcher, args, true]);
 
                     return;
                 }
@@ -69,8 +69,7 @@ export default class CSSCustomPropertiesWatch {
     }
 
     private _setPropertyCheck(
-        cssStyleDeclaration: CSSStyleDeclaration
-        , watcher: ICSSCustomPropertiesWatcher
+        watcher: ICSSCustomPropertiesWatcher
         , args: Parameters<CSSStyleDeclaration['setProperty']>
         , next: boolean
     ): void {
@@ -78,7 +77,7 @@ export default class CSSCustomPropertiesWatch {
 
         // only do something if the values are not the same.
         if (args[1] !== oldValue) {
-            this._originalSetProperty.apply(cssStyleDeclaration, args);
+            this._originalSetProperty.apply(watcher.cssStyleDeclaration, args);
 
             const newValue = watcher.cssStyleDeclaration.getPropertyValue(args[0]);
 
