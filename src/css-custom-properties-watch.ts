@@ -16,12 +16,17 @@ export default class CSSCustomPropertiesWatch {
             const unsubscriber = new Subject<void>();
             const subject = new Subject<Parameters<CSSStyleDeclaration['setProperty']>>().pipe(
                 takeUntil(unsubscriber)
-            ) as Subject<Parameters<CSSStyleDeclaration['setProperty']>>; 
-
-            this._watchers = this._watchers.concat({
+            ) as Subject<Parameters<CSSStyleDeclaration['setProperty']>>;
+            const newWatcher = {
                 cssStyleDeclaration: $el.style
                 , subject
                 , unsubscriber
+            };
+
+            this._watchers = this._watchers.concat(newWatcher);
+
+            subject.subscribe((args: Parameters<CSSStyleDeclaration['setProperty']>) => {
+                this._setPropertyCheck($el.style, newWatcher, args, false);
             });
 
             return subject;
@@ -50,27 +55,10 @@ export default class CSSCustomPropertiesWatch {
     private _setProperty(context: CSSCustomPropertiesWatch): CSSStyleDeclaration['setProperty'] {
         return function(...args: Parameters<CSSStyleDeclaration['setProperty']>) {
             if (this && args[0].slice(0, 2) === '--') {
-                const watcher = context._getWatcherMatch(this);
+                const watcherMatch = context._getWatcherMatch(this);
 
-                if (watcher !== null) {
-                    const oldValue = watcher.watcher.cssStyleDeclaration.getPropertyValue(args[0]);
-
-                    if (args[1] !== oldValue) {
-                        context._originalSetProperty.apply(this, args);
-
-                        const newValue = watcher.watcher.cssStyleDeclaration.getPropertyValue(args[0]);
-
-                        // sometimes changing a property to an invalid value can lead to the initial value being
-                        // set, which can be the old value. then nothing should be done.
-                        if (newValue !== oldValue) {
-                            watcher.watcher.subject.next(
-                                args.slice(0, 1).concat(
-                                    newValue
-                                    , args.slice(2)
-                                ) as Parameters<CSSStyleDeclaration['setProperty']>
-                            );
-                        }
-                    }
+                if (watcherMatch !== null) {
+                    context._setPropertyCheck.apply(context, [this, watcherMatch.watcher, args, true]);
 
                     return;
                 }
@@ -78,6 +66,45 @@ export default class CSSCustomPropertiesWatch {
 
             context._originalSetProperty.apply(this, args);
         };
+    }
+
+    private _setPropertyCheck(
+        cssStyleDeclaration: CSSStyleDeclaration
+        , watcher: ICSSCustomPropertiesWatcher
+        , args: Parameters<CSSStyleDeclaration['setProperty']>
+        , next: boolean
+    ): void {
+        const oldValue = watcher.cssStyleDeclaration.getPropertyValue(args[0]);
+
+        // only do something if the values are not the same.
+        if (args[1] !== oldValue) {
+            this._originalSetProperty.apply(cssStyleDeclaration, args);
+
+            const newValue = watcher.cssStyleDeclaration.getPropertyValue(args[0]);
+
+            // sometimes changing a property to an invalid value can lead to the initial value being
+            // set, which can be the old value. then nothing should be done.
+            if (newValue !== oldValue && next === true) {
+                watcher.subject.next(
+                    args.slice(0, 1).concat(
+                        newValue
+                        , args.slice(2)
+                    ) as Parameters<CSSStyleDeclaration['setProperty']>
+                );
+            }
+
+            // if the new value is not the one which should have been set, then something went wrong, so we
+            // throw an exception here.
+            if (newValue !== args[1]) {
+                throw new Error(`Error: "${
+                    args[0]
+                }" could not be set to "${
+                    args[1]
+                }", because its syntax might be invalid, inspite it was set to "${
+                    newValue
+                }".`);
+            }
+        }
     }
 
     private _getWatcherMatch(cssStyleDeclaration: CSSStyleDeclaration): ICSSCustomPropertiesWatcherMatch | null {

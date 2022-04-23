@@ -1489,15 +1489,21 @@ var CSSCustomPropertiesWatch = (function () {
     }
 
     CSSCustomPropertiesWatch.prototype.watch$ = function ($el) {
+      var _this = this;
+
       var watcherMatch = this._getWatcherMatch($el.style);
 
       if (watcherMatch === null) {
         var unsubscriber = new Subject();
         var subject = new Subject().pipe(takeUntil(unsubscriber));
-        this._watchers = this._watchers.concat({
+        var newWatcher_1 = {
           cssStyleDeclaration: $el.style,
           subject: subject,
           unsubscriber: unsubscriber
+        };
+        this._watchers = this._watchers.concat(newWatcher_1);
+        subject.subscribe(function (args) {
+          _this._setPropertyCheck($el.style, newWatcher_1, args, false);
         });
         return subject;
       }
@@ -1529,21 +1535,10 @@ var CSSCustomPropertiesWatch = (function () {
         }
 
         if (this && args[0].slice(0, 2) === '--') {
-          var watcher = context._getWatcherMatch(this);
+          var watcherMatch = context._getWatcherMatch(this);
 
-          if (watcher !== null) {
-            var oldValue = watcher.watcher.cssStyleDeclaration.getPropertyValue(args[0]);
-
-            if (args[1] !== oldValue) {
-              context._originalSetProperty.apply(this, args);
-
-              var newValue = watcher.watcher.cssStyleDeclaration.getPropertyValue(args[0]); // sometimes changing a property to an invalid value can lead to the initial value being
-              // set, which can be the old value. then nothing should be done.
-
-              if (newValue !== oldValue) {
-                watcher.watcher.subject.next(args.slice(0, 1).concat(newValue, args.slice(2)));
-              }
-            }
+          if (watcherMatch !== null) {
+            context._setPropertyCheck.apply(context, [this, watcherMatch.watcher, args, true]);
 
             return;
           }
@@ -1551,6 +1546,27 @@ var CSSCustomPropertiesWatch = (function () {
 
         context._originalSetProperty.apply(this, args);
       };
+    };
+
+    CSSCustomPropertiesWatch.prototype._setPropertyCheck = function (cssStyleDeclaration, watcher, args, next) {
+      var oldValue = watcher.cssStyleDeclaration.getPropertyValue(args[0]); // only do something if the values are not the same.
+
+      if (args[1] !== oldValue) {
+        this._originalSetProperty.apply(cssStyleDeclaration, args);
+
+        var newValue = watcher.cssStyleDeclaration.getPropertyValue(args[0]); // sometimes changing a property to an invalid value can lead to the initial value being
+        // set, which can be the old value. then nothing should be done.
+
+        if (newValue !== oldValue && next === true) {
+          watcher.subject.next(args.slice(0, 1).concat(newValue, args.slice(2)));
+        } // if the new value is not the one which should have been set, then something went wrong, so we
+        // throw an exception here.
+
+
+        if (newValue !== args[1]) {
+          throw new Error("Error: \"".concat(args[0], "\" could not be set to \"").concat(args[1], "\", because its syntax might be invalid, inspite it was set to \"").concat(newValue, "\"."));
+        }
+      }
     };
 
     CSSCustomPropertiesWatch.prototype._getWatcherMatch = function (cssStyleDeclaration) {
