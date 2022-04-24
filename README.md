@@ -173,13 +173,13 @@ Adds a watcher to the given element `$el` or `document.documentElement` aka `:ro
 public unwatch($el: HTMLElement | SVGElement = document.documentElement): boolean;
 ```
 
-Removes an already existing watcher from a given element `$el` or `document.documentElement` aka `:root` by default. Additionally it unsubscribes all subscribers automatically. Returns `true` if the element existed and a watcher had been added. Returns `false` if the element had no watcher. Throws an error, if the element is neither an [`HTMLElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement) nor a [`SVGElement`](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement).
+Removes an already existing watcher from a given element `$el` or `document.documentElement` aka `:root` by default. Additionally it unsubscribes all subscribers automatically. Returns `true` if the element existed and a watcher had been previously added. Returns `false` if the element had no previously added watcher. Throws an error, if the element is neither an [`HTMLElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement) nor a [`SVGElement`](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement).
 
 ---
 
 ## <a name="subject"></a> [RxJS `Subject`](https://rxjs.dev/guide/subject)
 
-The `watch$`-method returns an [RxJS `Subject`](https://rxjs.dev/guide/subject), which can then be used with the know methods, like [`next()`](https://rxjs.dev/guide/observable#executing-observables), [`subscribe()`](https://rxjs.dev/guide/observable#subscribing-to-observables) and the mighty operators through [`pipe()`](https://rxjs.dev/guide/operators)
+The `watch$`-method returns an [RxJS `Subject`](https://rxjs.dev/guide/subject), which can then be used with the known methods, like [`next()`](https://rxjs.dev/guide/observable#executing-observables), [`subscribe()`](https://rxjs.dev/guide/observable#subscribing-to-observables) and the mighty operators through [`pipe()`](https://rxjs.dev/guide/operators)
 
 ### `next`
 
@@ -192,7 +192,9 @@ Sets the new value of a [CSS Custom Property](https://developer.mozilla.org/en-U
 ### `subscribe`
 
 ```ts
-subscribe: (next: ([property, value, priority?]: [string, string, 'important' | '' | undefined]) => void) => Subscription;
+subscribe: (
+    next: ([property, value, priority?]: [string, string, 'important' | '' | undefined]) => void
+) => Subscription;
 ```
 
 Returns a subscription, which can be used to become informed, whenever a [CSS Custom Property](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties) in the [`CSSStyleDeclaration`](https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration) becomes changed.
