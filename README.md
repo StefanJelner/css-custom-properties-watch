@@ -39,7 +39,7 @@ Copy the file `/dist/css-custom-properties-watch.iife.min.js` and add the follow
         var root$ = watcher.watch$();
 
         // alternatively
-        var root$ = watcher.watch$(document.getElementById('foo'));
+        var foo$ = watcher.watch$(document.getElementById('foo'));
         
         root$.subscribe(console.log);
 
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const root$ = watcher.watch$();
 
     // alternatively
-    const root$ = watcher.watch$(document.getElementById('foo'));
+    const foo$ = watcher.watch$(document.getElementById('foo'));
     
     root$.subscribe(console.log);
 
