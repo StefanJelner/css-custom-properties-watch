@@ -24,41 +24,45 @@ export default class CSSCustomPropertiesWatch {
     public watch$(
         $el: HTMLElement | SVGElement = document.documentElement
     ): Subject<Parameters<CSSStyleDeclaration['setProperty']>> {
-        const watcherMatch = this._getWatcherMatch($el.style);
+        if ($el instanceof HTMLElement || $el instanceof SVGElement) {
+            const watcherMatch = this._getWatcherMatch($el.style);
 
-        if (watcherMatch === null) {
-            const unsubscriber$ = new Subject<void>();
-            const subject$ = new Subject<Parameters<CSSStyleDeclaration['setProperty']>>().pipe(
-                takeUntil(unsubscriber$)
-            ) as Subject<Parameters<CSSStyleDeclaration['setProperty']>>;
-            const ignoreNext$ = new BehaviorSubject<boolean>(false);
-            const newWatcher = {
-                cssStyleDeclaration: $el.style
-                , ignoreNext$
-                , subject$
-                , unsubscriber$
-            };
+            if (watcherMatch === null) {
+                const unsubscriber$ = new Subject<void>();
+                const subject$ = new Subject<Parameters<CSSStyleDeclaration['setProperty']>>().pipe(
+                    takeUntil(unsubscriber$)
+                ) as Subject<Parameters<CSSStyleDeclaration['setProperty']>>;
+                const ignoreNext$ = new BehaviorSubject<boolean>(false);
+                const newWatcher = {
+                    cssStyleDeclaration: $el.style
+                    , ignoreNext$
+                    , subject$
+                    , unsubscriber$
+                };
 
-            this._watchers = this._watchers.concat(newWatcher);
+                this._watchers = this._watchers.concat(newWatcher);
 
-            subject$.pipe(withLatestFrom(ignoreNext$)).subscribe(([
-                args
-                , ignoreNext
-            ]: [
-                Parameters<CSSStyleDeclaration['setProperty']>
-                , boolean
-            ]) => {
-                if (ignoreNext === false) {
-                    this._setPropertyCheck(newWatcher, args, false);
-                } else {
-                    ignoreNext$.next(false);
-                }
-            });
+                subject$.pipe(withLatestFrom(ignoreNext$)).subscribe(([
+                    args
+                    , ignoreNext
+                ]: [
+                    Parameters<CSSStyleDeclaration['setProperty']>
+                    , boolean
+                ]) => {
+                    if (ignoreNext === false) {
+                        this._setPropertyCheck(newWatcher, args, false);
+                    } else {
+                        ignoreNext$.next(false);
+                    }
+                });
 
-            return subject$;
+                return subject$;
+            }
+
+            return watcherMatch.watcher.subject$;
+        } else {
+            throw('Error: The provided element is neither an HTMLElement, nor a SVGElement');
         }
-
-        return watcherMatch.watcher.subject$;
     }
 
     /**
@@ -68,20 +72,27 @@ export default class CSSCustomPropertiesWatch {
      * @returns Whether the element was watched before and the watcher has been removed or not
      */
     public unwatch($el: HTMLElement | SVGElement = document.documentElement): boolean {
-        const watcherMatch = this._getWatcherMatch($el.style);
+        if ($el instanceof HTMLElement || $el instanceof SVGElement) {
+            const watcherMatch = this._getWatcherMatch($el.style);
 
-        if (watcherMatch !== null) {
-            // quit all subscriptions
-            watcherMatch.watcher.unsubscriber$.next();
-            watcherMatch.watcher.unsubscriber$.complete();
+            if (watcherMatch !== null) {
+                // quit all subscriptions
+                watcherMatch.watcher.unsubscriber$.next();
+                watcherMatch.watcher.unsubscriber$.complete();
 
-            // remove watcher from list
-            this._watchers = this._watchers.slice(0, watcherMatch.i).concat(this._watchers.slice(watcherMatch.i + 1)); 
+                // remove watcher from list
+                this._watchers = this._watchers
+                    .slice(0, watcherMatch.i)
+                    .concat(this._watchers.slice(watcherMatch.i + 1))
+                ; 
 
-            return true;
+                return true;
+            }
+
+            return false;
+        } else {
+            throw('Error: The provided element is neither an HTMLElement, nor a SVGElement');
         }
-
-        return false;
     }
 
     /**

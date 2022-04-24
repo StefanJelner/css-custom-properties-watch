@@ -12,9 +12,18 @@ This library is monkey patching [`CSSStyleDeclaration.setProperty()`](https://de
 
 > <img src="assets/warning.png" alt="Important" width="50" height="60" align="left" /> **IMPORTANT!** Even it is technically possible, try to not use the `CSSCustomPropertiesWatch` class several times and therefore monkey patch the same elements several times. It could cause performance issues and does not make sense. The library can actually be wrapped in a singleton service. It is more meant as a starting point for more complex algorithms. (Like f.ex. reacting on the change of specific CSS custom properties.)
 
-# Usage
+---
 
-## In Vanilla JS
+## Table of contents
+
+- [Usage in Vanilla JS](#vanilla-js)
+- [Usage in TypeScript (and ES6)](#typescript)
+- [Methods](#methods)
+- [License](#license)
+
+---
+
+## <a name="vanilla-js"></a> Usage in Vanilla JS
 
 Copy the file `/dist/css-custom-properties-watch.iife.min.js` and add the following to your HTML:
 
@@ -59,10 +68,32 @@ or
 <script src="https://cdn.jsdelivr.net/npm/css-custom-properties-watch/dist/css-custom-properties-watch.iife.min.js"></script>
 ```
 
-## In TypeScript (and ES6)
+---
+
+## <a name="typescript"></a> Usage in TypeScript (and ES6)
 
 Actually this library is more meant for being used in TypeScript- or ES6-projects. One advantage is, that if the project uses [RxJS](https://github.com/reactivex/rxjs) anyway, the usage in this library does not add up to the bundle size.
 
-## License
+---
+
+## <a name="methods"></a> Methods
+
+### `watch$`
+
+```ts
+public watch$(
+    $el: HTMLElement | SVGElement = document.documentElement
+): Subject<Parameters<CSSStyleDeclaration['setProperty']>>;
+```
+
+### `unwatch`
+
+```ts
+public unwatch($el: HTMLElement | SVGElement = document.documentElement): boolean;
+```
+
+---
+
+## <a name="license"></a> License
 
 This software is brought to you with :heart: **love** :heart: from Dortmund and offered and distributed under the ISC license. See `LICENSE.txt` and [Wikipedia](https://en.wikipedia.org/wiki/ISC_license) for more information.
