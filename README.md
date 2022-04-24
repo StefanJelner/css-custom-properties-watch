@@ -1,6 +1,6 @@
-# [CSS Custom Properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties) Watch
+# :eyes: [CSS Custom Properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties) Watch
 
-This library is monkey patching [`CSSStyleDeclaration.setProperty()`](https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration/setProperty) so that changes could be watched for a given [`HTMLElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement) or [`SVGElement`](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement), by providing an [RxJS `Subject`](https://rxjs.dev/guide/subject).
+This library is :see_no_evil: monkey patching [`CSSStyleDeclaration.setProperty()`](https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration/setProperty) so that changes could be watched for a given [`HTMLElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement) or [`SVGElement`](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement), by providing an [RxJS `Subject`](https://rxjs.dev/guide/subject).
 
 [![css-custom-properties-watch on npmjs.com](https://img.shields.io/npm/v/css-custom-properties-watch?logo=npm&logoColor=white)](https://www.npmjs.com/package/css-custom-properties-watch)
 [![css-custom-properties-watch on GitHub](https://img.shields.io/github/package-json/v/StefanJelner/css-custom-properties-watch?logo=github&logoColor=white)](https://github.com/StefanJelner/css-custom-properties-watch)
