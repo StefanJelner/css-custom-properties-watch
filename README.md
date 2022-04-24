@@ -10,8 +10,6 @@ This library is monkey patching [`CSSStyleDeclaration.setProperty()`](https://de
 
 > <img src="assets/warning.png" alt="Important" width="50" height="60" align="left" /> **IMPORTANT!** This library could also just offer a new event (like `onCSSCustomPropertyChange` or similar) on the [`CSSStyleDeclaration`](https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration), [`HTMLElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement) or [`SVGElement`](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement). This is not done on purpose, because it would add non-standard and undocumented behavior (which could possibly collide with other things in the future.) The idea was, to add a mechanism which is totally invisible.
 
-> <img src="assets/warning.png" alt="Important" width="50" height="60" align="left" /> **IMPORTANT!** Even it is technically possible, try to not use the `CSSCustomPropertiesWatch` class several times and therefore monkey patch the same elements several times. It could cause performance issues and does not make sense. The library can actually be wrapped in a singleton service. It is more meant as a starting point for more complex algorithms. (Like f.ex. reacting on the change of specific CSS custom properties.)
-
 ---
 
 ## Table of contents
@@ -31,6 +29,7 @@ Copy the file `/dist/css-custom-properties-watch.iife.min.js` and add the follow
 <script src="css-custom-properties-watch.iife.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // every new instance is actually the same instance, because it is a singleton.
         var watcher = new CSSCustomPropertiesWatch();
 
         var root$ = watcher.watch$(document.documentElement);
@@ -77,6 +76,10 @@ Actually this library is more meant for being used in TypeScript- or ES6-project
 ---
 
 ## <a name="methods"></a> Methods
+
+### `new CSSCustomPropertiesWatch()`
+
+A new instance can be created without any argument. It is a singleton class, therefore every new instance is just the same instance and the monkey patch is not accidently done several times.
 
 ### `watch$`
 

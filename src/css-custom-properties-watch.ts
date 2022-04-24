@@ -2,6 +2,9 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { takeUntil, withLatestFrom } from 'rxjs/operators';
 
 export default class CSSCustomPropertiesWatch {
+    // singleton pattern. see https://stackoverflow.com/a/30174079/5794504
+    private static instance: CSSCustomPropertiesWatch;
+
     // Holds the original setProperty()-method.
     private _originalSetProperty: CSSStyleDeclaration['setProperty'] = CSSStyleDeclaration.prototype.setProperty;
 
@@ -9,9 +12,15 @@ export default class CSSCustomPropertiesWatch {
     private _watchers: Array<ICSSCustomPropertiesWatcher> = [];
 
     /**
-     * Constructor. Only does the monkey patching.
+     * Constructor.
      */
     constructor() {
+        if (CSSCustomPropertiesWatch.instance) { return CSSCustomPropertiesWatch.instance; }
+
+        // set instance directly here to prevent recursions
+        CSSCustomPropertiesWatch.instance = this;
+
+        // do the monkey patch! DON'T DO THIS AT HOME!
         CSSStyleDeclaration.prototype.setProperty = this._setProperty(this);
     }
 
