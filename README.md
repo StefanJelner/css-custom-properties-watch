@@ -1,4 +1,4 @@
-# CSS Custom Properties Watch
+# [CSS Custom Properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties) Watch
 
 This library is monkey patching [`CSSStyleDeclaration.setProperty()`](https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration/setProperty) so that changes could be watched for a given [`HTMLElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement) or [`SVGElement`](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement), by providing an [RxJS `Subject`](https://rxjs.dev/guide/subject).
 
@@ -17,6 +17,7 @@ This library is monkey patching [`CSSStyleDeclaration.setProperty()`](https://de
 - [Usage in Vanilla JS](#vanilla-js)
 - [Usage in TypeScript (and ES6)](#typescript)
 - [Methods](#methods)
+- [RxJS Subject](#subject)
 - [License](#license)
 
 ---
@@ -34,8 +35,11 @@ Copy the file `/dist/css-custom-properties-watch.iife.min.js` and add the follow
 
         var root$ = watcher.watch$(document.documentElement);
 
-        // document.documentElement is the default, so alternatively it can be called like this:
+        // document.documentElement aks :root is the default, so alternatively it can be called like this:
         var root$ = watcher.watch$();
+
+        // alternatively
+        var root$ = watcher.watch$(document.getElementById('foo'));
         
         root$.subscribe(console.log);
 
@@ -45,8 +49,11 @@ Copy the file `/dist/css-custom-properties-watch.iife.min.js` and add the follow
 
         watcher.unwatch(document.documentElement);
 
-        // document.documentElement is the default, so alternatively it can be called like this:
+        // document.documentElement aka :root is the default, so alternatively it can be called like this:
         watcher.unwatch();
+
+        // alternatively
+        watcher.unwatch(document.getElementById('foo'));
 
         document.documentElement.style.setProperty('--foo', '14px'); // logs nothing
 
@@ -73,6 +80,75 @@ or
 
 Actually this library is more meant for being used in TypeScript- or ES6-projects. One advantage is, that if the project uses [RxJS](https://github.com/reactivex/rxjs) anyway, the usage in this library does not add up to the bundle size.
 
+```ts
+import CSSCustomPropertiesWatch from 'node_modules/css-custom-properties-watch';
+
+document.addEventListener('DOMContentLoaded', () => {
+    // every new instance is actually the same instance, because it is a singleton.
+    const watcher = new CSSCustomPropertiesWatch();
+
+    const root$ = watcher.watch$(document.documentElement);
+
+    // document.documentElement aks :root is the default, so alternatively it can be called like this:
+    const root$ = watcher.watch$();
+
+    // alternatively
+    const root$ = watcher.watch$(document.getElementById('foo'));
+    
+    root$.subscribe(console.log);
+
+    document.documentElement.style.setProperty('--foo', '12px'); // logs ['--foo', '12px']
+
+    root$.next(['--foo', '13px']); // logs ['--foo', '13px']
+
+    watcher.unwatch(document.documentElement);
+
+    // document.documentElement aka :root is the default, so alternatively it can be called like this:
+    watcher.unwatch();
+
+    // alternatively
+    watcher.unwatch(document.getElementById('foo'));
+
+    document.documentElement.style.setProperty('--foo', '14px'); // logs nothing
+
+    root$.next(['--foo', '15px']); // should throw an error
+});
+```
+
+It can be used, to selectively react on changes:
+
+```ts
+import CSSCustomPropertiesWatch from 'node_modules/css-custom-properties-watch';
+
+document.addEventListener('DOMContentLoaded', () => {
+    const watcher = new CSSCustomPropertiesWatch();
+
+    const root$ = watcher.watch$();
+    
+    root$.subscribe(([property]: [string]) => {
+        if (property === '--foo') {
+            // do something useful here.
+        }
+    });
+});
+```
+
+Or very short:
+
+```ts
+import CSSCustomPropertiesWatch from 'node_modules/css-custom-properties-watch';
+
+document.addEventListener('DOMContentLoaded', () => {
+    new CSSCustomPropertiesWatch().watch$().subscribe(([property]: [string]) => {
+        if (property === '--foo') {
+            // do something useful here.
+        }
+    });
+});
+```
+
+> <img src="assets/info.png" alt="Advice" width="50" height="60" align="left" /> **ADVICE!** It is recommended, that if this library is used in the context of reactive libraries, like [Angular](https://github.com/angular/angular), [React](https://github.com/facebook/react) or [Vue](https://github.com/vuejs), in the lifecycle when components become destroyed, the relating elements should be unwatched to prevent memory leaks. (Even the browsers have a good garbage collection.)
+
 ---
 
 ## <a name="methods"></a> Methods
@@ -89,11 +165,37 @@ public watch$(
 ): Subject<Parameters<CSSStyleDeclaration['setProperty']>>;
 ```
 
+Adds a watcher to the given element `$el` or `document.documentElement` aka `:root` by default and returns an [RxJS `Subject`](https://rxjs.dev/guide/subject), which can be used like any other [RxJS `Observable`](https://rxjs.dev/guide/observable). Throws an error, if the element is neither an [`HTMLElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement) nor a [`SVGElement`](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement).
+
 ### `unwatch`
 
 ```ts
 public unwatch($el: HTMLElement | SVGElement = document.documentElement): boolean;
 ```
+
+Removes an already existing watcher from a given element `$el` or `document.documentElement` aka `:root` by default. Additionally it unsubscribes all subscribers automatically. Returns `true` if the element existed and a watcher had been added. Returns `false` if the element had no watcher. Throws an error, if the element is neither an [`HTMLElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement) nor a [`SVGElement`](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement).
+
+---
+
+## <a name="subject"></a> [RxJS `Subject`](https://rxjs.dev/guide/subject)
+
+The `watch$`-method returns an [RxJS `Subject`](https://rxjs.dev/guide/subject), which can then be used with the know methods, like [`next()`](https://rxjs.dev/guide/observable#executing-observables), [`subscribe()`](https://rxjs.dev/guide/observable#subscribing-to-observables) and the mighty operators through [`pipe()`](https://rxjs.dev/guide/operators)
+
+### `next`
+
+```ts
+next: ([property, value, priority?]: [string, string, 'important' | '' | undefined]) => void;
+```
+
+Sets the new value of a [CSS Custom Property](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties) in the [`CSSStyleDeclaration`](https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration) and informs all subscribers about the new value.
+
+### `subscribe`
+
+```ts
+subscribe: (next: ([property, value, priority?]: [string, string, 'important' | '' | undefined]) => void) => Subscription;
+```
+
+Returns a subscription, which can be used to become informed, whenever a [CSS Custom Property](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties) in the [`CSSStyleDeclaration`](https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration) becomes changed.
 
 ---
 

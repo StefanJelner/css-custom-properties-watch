@@ -70,7 +70,7 @@ export default class CSSCustomPropertiesWatch {
 
             return watcherMatch.watcher.subject$;
         } else {
-            throw('Error: The provided element is neither an HTMLElement, nor a SVGElement');
+            throw('Error: The provided element is neither an HTMLElement nor a SVGElement');
         }
     }
 
@@ -100,7 +100,7 @@ export default class CSSCustomPropertiesWatch {
 
             return false;
         } else {
-            throw('Error: The provided element is neither an HTMLElement, nor a SVGElement');
+            throw('Error: The provided element is neither an HTMLElement nor a SVGElement');
         }
     }
 
