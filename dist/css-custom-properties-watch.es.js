@@ -1205,6 +1205,61 @@ var AnonymousSubject = function (_super) {
   return AnonymousSubject;
 }(Subject);
 
+var BehaviorSubject = function (_super) {
+  __extends(BehaviorSubject, _super);
+
+  function BehaviorSubject(_value) {
+    var _this = _super.call(this) || this;
+
+    _this._value = _value;
+    return _this;
+  }
+
+  Object.defineProperty(BehaviorSubject.prototype, "value", {
+    get: function get() {
+      return this.getValue();
+    },
+    enumerable: false,
+    configurable: true
+  });
+
+  BehaviorSubject.prototype._subscribe = function (subscriber) {
+    var subscription = _super.prototype._subscribe.call(this, subscriber);
+
+    !subscription.closed && subscriber.next(this._value);
+    return subscription;
+  };
+
+  BehaviorSubject.prototype.getValue = function () {
+    var _a = this,
+        hasError = _a.hasError,
+        thrownError = _a.thrownError,
+        _value = _a._value;
+
+    if (hasError) {
+      throw thrownError;
+    }
+
+    this._throwIfClosed();
+
+    return _value;
+  };
+
+  BehaviorSubject.prototype.next = function (value) {
+    _super.prototype.next.call(this, this._value = value);
+  };
+
+  return BehaviorSubject;
+}(Subject);
+
+function last(arr) {
+  return arr[arr.length - 1];
+}
+
+function popResultSelector(args) {
+  return isFunction(last(args)) ? args.pop() : undefined;
+}
+
 var isArrayLike = function isArrayLike(x) {
   return x && typeof x.length === 'number' && typeof x !== 'function';
 };
@@ -1476,45 +1531,122 @@ function takeUntil(notifier) {
   });
 }
 
+function withLatestFrom() {
+  var inputs = [];
+
+  for (var _i = 0; _i < arguments.length; _i++) {
+    inputs[_i] = arguments[_i];
+  }
+
+  var project = popResultSelector(inputs);
+  return operate(function (source, subscriber) {
+    var len = inputs.length;
+    var otherValues = new Array(len);
+    var hasValue = inputs.map(function () {
+      return false;
+    });
+    var ready = false;
+
+    var _loop_1 = function _loop_1(i) {
+      innerFrom(inputs[i]).subscribe(createOperatorSubscriber(subscriber, function (value) {
+        otherValues[i] = value;
+
+        if (!ready && !hasValue[i]) {
+          hasValue[i] = true;
+          (ready = hasValue.every(identity)) && (hasValue = null);
+        }
+      }, noop));
+    };
+
+    for (var i = 0; i < len; i++) {
+      _loop_1(i);
+    }
+
+    source.subscribe(createOperatorSubscriber(subscriber, function (value) {
+      if (ready) {
+        var values = __spreadArray([value], __read(otherValues));
+
+        subscriber.next(project ? project.apply(void 0, __spreadArray([], __read(values))) : values);
+      }
+    }));
+  });
+}
+
 var CSSCustomPropertiesWatch =
 /** @class */
 function () {
+  /**
+   * Constructor. Only does the monkey patching.
+   */
   function CSSCustomPropertiesWatch() {
-    this._originalSetProperty = CSSStyleDeclaration.prototype.setProperty;
+    // Holds the original setProperty()-method.
+    this._originalSetProperty = CSSStyleDeclaration.prototype.setProperty; // Array of all watchers.
+
     this._watchers = [];
     CSSStyleDeclaration.prototype.setProperty = this._setProperty(this);
   }
+  /**
+   * Adds a watcher RxJS Subject to an element, to watch for changes on CSS custom properties.
+   *
+   * @param $el The element to watch for changes on CSS custom properties. Default is :root.
+   * @returns The watcher RxJS Subject
+   */
+
 
   CSSCustomPropertiesWatch.prototype.watch$ = function ($el) {
     var _this = this;
 
+    if ($el === void 0) {
+      $el = document.documentElement;
+    }
+
     var watcherMatch = this._getWatcherMatch($el.style);
 
     if (watcherMatch === null) {
-      var unsubscriber = new Subject();
-      var subject = new Subject().pipe(takeUntil(unsubscriber));
+      var unsubscriber$ = new Subject();
+      var subject$ = new Subject().pipe(takeUntil(unsubscriber$));
+      var ignoreNext$_1 = new BehaviorSubject(false);
       var newWatcher_1 = {
         cssStyleDeclaration: $el.style,
-        subject: subject,
-        unsubscriber: unsubscriber
+        ignoreNext$: ignoreNext$_1,
+        subject$: subject$,
+        unsubscriber$: unsubscriber$
       };
       this._watchers = this._watchers.concat(newWatcher_1);
-      subject.subscribe(function (args) {
-        _this._setPropertyCheck($el.style, newWatcher_1, args, false);
+      subject$.pipe(withLatestFrom(ignoreNext$_1)).subscribe(function (_a) {
+        var args = _a[0],
+            ignoreNext = _a[1];
+
+        if (ignoreNext === false) {
+          _this._setPropertyCheck(newWatcher_1, args, false);
+        } else {
+          ignoreNext$_1.next(false);
+        }
       });
-      return subject;
+      return subject$;
     }
 
-    return watcherMatch.watcher.subject;
+    return watcherMatch.watcher.subject$;
   };
+  /**
+   * Unwatches a former watched element. Also removes all subscribers.
+   *
+   * @param $el The element to unwatch. Default is :root.
+   * @returns Whether the element was watched before and the watcher has been removed or not
+   */
+
 
   CSSCustomPropertiesWatch.prototype.unwatch = function ($el) {
+    if ($el === void 0) {
+      $el = document.documentElement;
+    }
+
     var watcherMatch = this._getWatcherMatch($el.style);
 
     if (watcherMatch !== null) {
       // quit all subscriptions
-      watcherMatch.watcher.unsubscriber.next();
-      watcherMatch.watcher.unsubscriber.complete(); // remove watcher from list
+      watcherMatch.watcher.unsubscriber$.next();
+      watcherMatch.watcher.unsubscriber$.complete(); // remove watcher from list
 
       this._watchers = this._watchers.slice(0, watcherMatch.i).concat(this._watchers.slice(watcherMatch.i + 1));
       return true;
@@ -1522,6 +1654,14 @@ function () {
 
     return false;
   };
+  /**
+   * Returns a monkey patched setProperty()-method with both scopes, the context of this class and the context
+   * of the CSSStyleDeclaration.
+   *
+   * @param context The context of this class
+   * @returns A monkey patched setProperty()-method
+   */
+
 
   CSSCustomPropertiesWatch.prototype._setProperty = function (context) {
     return function () {
@@ -1535,7 +1675,7 @@ function () {
         var watcherMatch = context._getWatcherMatch(this);
 
         if (watcherMatch !== null) {
-          context._setPropertyCheck.apply(context, [this, watcherMatch.watcher, args, true]);
+          context._setPropertyCheck.apply(context, [watcherMatch.watcher, args, true]);
 
           return;
         }
@@ -1544,18 +1684,31 @@ function () {
       context._originalSetProperty.apply(this, args);
     };
   };
+  /**
+   * Finally sets the CSS custom property with the original setProperty()-method and additionally checks
+   * whether it is necessary to do so and whether it has any effect. (Because the user might provide an
+   * invalid data, which causes the browser to ignore it or - with the new registerProperty()-method - provide
+   * a fallback value.)
+   *
+   * @param watcher The watcher related to the CSSStyleDeclaration
+   * @param args The original arguments
+   * @param next Whether to call next() on the RxJS Subject after everything has been done
+   */
 
-  CSSCustomPropertiesWatch.prototype._setPropertyCheck = function (cssStyleDeclaration, watcher, args, next) {
+
+  CSSCustomPropertiesWatch.prototype._setPropertyCheck = function (watcher, args, next) {
     var oldValue = watcher.cssStyleDeclaration.getPropertyValue(args[0]); // only do something if the values are not the same.
 
     if (args[1] !== oldValue) {
-      this._originalSetProperty.apply(cssStyleDeclaration, args);
+      this._originalSetProperty.apply(watcher.cssStyleDeclaration, args);
 
       var newValue = watcher.cssStyleDeclaration.getPropertyValue(args[0]); // sometimes changing a property to an invalid value can lead to the initial value being
       // set, which can be the old value. then nothing should be done.
 
       if (newValue !== oldValue && next === true) {
-        watcher.subject.next(args.slice(0, 1).concat(newValue, args.slice(2)));
+        // make sure _setPropertyCheck() is not called twice because of the subscription
+        watcher.ignoreNext$.next(true);
+        watcher.subject$.next(args.slice(0, 1).concat(newValue, args.slice(2)));
       } // if the new value is not the one which should have been set, then something went wrong, so we
       // throw an exception here.
 
@@ -1565,6 +1718,13 @@ function () {
       }
     }
   };
+  /**
+   * Finds the related watcher for a given CSSStyleDeclaration.
+   *
+   * @param cssStyleDeclaration A given CSSStyleDeclaration to find the related watcher for.
+   * @returns The related watcher for a given CSSStyleDeclaration
+   */
+
 
   CSSCustomPropertiesWatch.prototype._getWatcherMatch = function (cssStyleDeclaration) {
     return this._watchers.reduce(function (watcherMatch, watcher, i) {
