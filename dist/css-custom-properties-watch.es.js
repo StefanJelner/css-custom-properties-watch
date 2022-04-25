@@ -1576,13 +1576,21 @@ var CSSCustomPropertiesWatch =
 /** @class */
 function () {
   /**
-   * Constructor. Only does the monkey patching.
+   * Constructor.
    */
   function CSSCustomPropertiesWatch() {
     // Holds the original setProperty()-method.
     this._originalSetProperty = CSSStyleDeclaration.prototype.setProperty; // Array of all watchers.
 
     this._watchers = [];
+
+    if (CSSCustomPropertiesWatch.instance) {
+      return CSSCustomPropertiesWatch.instance;
+    } // set instance directly here to prevent recursions
+
+
+    CSSCustomPropertiesWatch.instance = this; // do the monkey patch! DON'T DO THIS AT HOME!
+
     CSSStyleDeclaration.prototype.setProperty = this._setProperty(this);
   }
   /**
@@ -1600,33 +1608,37 @@ function () {
       $el = document.documentElement;
     }
 
-    var watcherMatch = this._getWatcherMatch($el.style);
+    if ($el instanceof HTMLElement || $el instanceof SVGElement) {
+      var watcherMatch = this._getWatcherMatch($el.style);
 
-    if (watcherMatch === null) {
-      var unsubscriber$ = new Subject();
-      var subject$ = new Subject().pipe(takeUntil(unsubscriber$));
-      var ignoreNext$_1 = new BehaviorSubject(false);
-      var newWatcher_1 = {
-        cssStyleDeclaration: $el.style,
-        ignoreNext$: ignoreNext$_1,
-        subject$: subject$,
-        unsubscriber$: unsubscriber$
-      };
-      this._watchers = this._watchers.concat(newWatcher_1);
-      subject$.pipe(withLatestFrom(ignoreNext$_1)).subscribe(function (_a) {
-        var args = _a[0],
-            ignoreNext = _a[1];
+      if (watcherMatch === null) {
+        var unsubscriber$ = new Subject();
+        var subject$ = new Subject().pipe(takeUntil(unsubscriber$));
+        var ignoreNext$_1 = new BehaviorSubject(false);
+        var newWatcher_1 = {
+          cssStyleDeclaration: $el.style,
+          ignoreNext$: ignoreNext$_1,
+          subject$: subject$,
+          unsubscriber$: unsubscriber$
+        };
+        this._watchers = this._watchers.concat(newWatcher_1);
+        subject$.pipe(withLatestFrom(ignoreNext$_1)).subscribe(function (_a) {
+          var args = _a[0],
+              ignoreNext = _a[1];
 
-        if (ignoreNext === false) {
-          _this._setPropertyCheck(newWatcher_1, args, false);
-        } else {
-          ignoreNext$_1.next(false);
-        }
-      });
-      return subject$;
+          if (ignoreNext === false) {
+            _this._setPropertyCheck(newWatcher_1, args, false);
+          } else {
+            ignoreNext$_1.next(false);
+          }
+        });
+        return subject$;
+      }
+
+      return watcherMatch.watcher.subject$;
+    } else {
+      throw 'Error: The provided element is neither an HTMLElement nor a SVGElement';
     }
-
-    return watcherMatch.watcher.subject$;
   };
   /**
    * Unwatches a former watched element. Also removes all subscribers.
@@ -1641,18 +1653,22 @@ function () {
       $el = document.documentElement;
     }
 
-    var watcherMatch = this._getWatcherMatch($el.style);
+    if ($el instanceof HTMLElement || $el instanceof SVGElement) {
+      var watcherMatch = this._getWatcherMatch($el.style);
 
-    if (watcherMatch !== null) {
-      // quit all subscriptions
-      watcherMatch.watcher.unsubscriber$.next();
-      watcherMatch.watcher.unsubscriber$.complete(); // remove watcher from list
+      if (watcherMatch !== null) {
+        // quit all subscriptions
+        watcherMatch.watcher.unsubscriber$.next();
+        watcherMatch.watcher.unsubscriber$.complete(); // remove watcher from list
 
-      this._watchers = this._watchers.slice(0, watcherMatch.i).concat(this._watchers.slice(watcherMatch.i + 1));
-      return true;
+        this._watchers = this._watchers.slice(0, watcherMatch.i).concat(this._watchers.slice(watcherMatch.i + 1));
+        return true;
+      }
+
+      return false;
+    } else {
+      throw 'Error: The provided element is neither an HTMLElement nor a SVGElement';
     }
-
-    return false;
   };
   /**
    * Returns a monkey patched setProperty()-method with both scopes, the context of this class and the context

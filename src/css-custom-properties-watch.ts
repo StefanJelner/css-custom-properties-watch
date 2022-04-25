@@ -112,7 +112,7 @@ export default class CSSCustomPropertiesWatch {
      * @returns A monkey patched setProperty()-method
      */
     private _setProperty(context: CSSCustomPropertiesWatch): CSSStyleDeclaration['setProperty'] {
-        return function(...args: Parameters<CSSStyleDeclaration['setProperty']>) {
+        return function(this: CSSStyleDeclaration, ...args: Parameters<CSSStyleDeclaration['setProperty']>): void {
             if (this && args[0].slice(0, 2) === '--') {
                 const watcherMatch = context._getWatcherMatch(this);
 
